@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Grid Layout</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      height: 100vh;
+      display: grid;
+      grid-template-rows: 60px auto;
+      grid-template-columns: 1fr 300px;
+      grid-template-areas:
+        "filter filter"
+        "main side";
+      gap: 10px;
+      background-color: #f5f5f5;
+    }
+
+    .filter {
+      grid-area: filter;
+      background: #333;
+      color: white;
+      padding: 15px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .main {
+      grid-area: main;
+      background: white;
+      padding: 20px;
+      overflow-y: auto;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+
+    .side {
+      grid-area: side;
+      background: #fafafa;
+      padding: 20px;
+      border-left: 1px solid #ddd;
+      overflow-y: auto;
+    }
+
+    /* Optional: make it responsive */
+    @media (max-width: 768px) {
+      body {
+        grid-template-columns: 1fr;
+        grid-template-areas:
+          "filter"
+          "main"
+          "side";
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="filter">
+    <span>🔍 Filters</span>
+    <button style="padding: 6px 12px;">Apply</button>
+  </div>
+
+  <div class="main">
+    <h2>Main Content Area</h2>
+    <p>This is where your main content goes. It will expand and take the available space.</p>
+    <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam a suscipit ipsum.</p>
+  </div>
+
+  <div class="side">
+    <h3>Right Panel</h3>
+    <p>Useful for additional tools, data, or navigation.</p>
+  </div>
+</body>
+</html>

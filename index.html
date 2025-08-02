@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>D3.js Line Chart with Tooltip</title>
+  <script src="https://d3js.org/d3.v6.min.js"></script>
+  <script src="https://unpkg.com/topojson-client@3"></script>
+  <link rel="stylesheet" href="./styles.css">
+ 
+</head>
+<body>
+
+  
+  <div class="filter">
+    <span>🔍 Filters 
+      <label>
+    <input type="checkbox" id="toggleBox"> Relative to the world total
+  </label>
+    </span>
+    
+  </div>
+
+  <div class="main">
+    <h2>Green house gas emissions</h2>
+    <!--<p>CO2 and Greenhouse gas emissions</p>-->
+    <div id="viz">
+      <svg width="1100" height="800" id="chart"></svg>
+    </div>
+  </div>
+
+  <div class="side">
+    <div id="checkbox-container" class= "country-container">
+      <h3>Filter Countries</h3>
+    </div>
+  </div>
+    
+  </div>
+  <div class="tooltip" id="tooltip"></div>
+
+  
+  <script>
+
+    // Set up the margins and dimensions for the chart
+    const margin = { top: 20, right: 220, bottom: 50, left: 100 };
+    const width = 1100 - margin.left - margin.right;
+    const height = 600 - margin.top - margin.bottom;
+    var allcountries = [
+              "World","High-income countries","Upper-middle-income countries","Low-income countries","Lower-middle-income countries","Least developed countries (Jones et al.)","United States","United Kingdom","India","Germany","China","Afghanistan","Albania","Algeria","Andorra","Angola","Antigua and Barbuda","Argentina","Armenia",
+              "Australia","Austria","Azerbaijan","Bahamas","Bahrain","Bangladesh","Barbados","Belarus","Belgium",
+              "Belize","Benin","Bhutan","Bolivia","Bosnia and Herzegovina","Botswana","Brazil","Brunei","Bulgaria",
+              "Burkina Faso","Burundi","Cabo Verde","Cambodia","Cameroon","Canada","Central African Republic","Chad",
+              "Chile","Colombia","Comoros","Congo (Congo-Brazzaville)","Costa Rica","Croatia","Cuba","Cyprus",
+              "Czech Republic","Democratic Republic of the Congo","Denmark","Djibouti","Dominica","Dominican Republic",
+              "Ecuador","Egypt","El Salvador","Equatorial Guinea","Eritrea","Estonia","Eswatini (fmr. Swaziland)",
+              "Ethiopia","Fiji","Finland","France","Gabon","Gambia","Georgia","Ghana","Greece","Grenada",
+              "Guatemala","Guinea","Guinea-Bissau","Guyana","Haiti","Holy See","Honduras","Hungary","Iceland",
+              "Indonesia","Iran","Iraq","Ireland","Israel","Italy","Jamaica","Japan","Jordan","Kazakhstan","Kenya",
+              "Kiribati","Kuwait","Kyrgyzstan","Laos","Latvia","Lebanon","Lesotho","Liberia","Libya","Liechtenstein",
+              "Lithuania","Luxembourg","Madagascar","Malawi","Malaysia","Maldives","Mali","Malta","Marshall Islands",
+              "Mauritania","Mauritius","Mexico","Micronesia","Moldova","Monaco","Mongolia","Montenegro","Morocco",
+              "Mozambique","Myanmar (Burma)","Namibia","Nauru","Nepal","Netherlands","New Zealand","Nicaragua","Niger",
+              "Nigeria","North Korea","North Macedonia","Norway","Oman","Pakistan","Palau","Palestine State","Panama",
+              "Papua New Guinea","Paraguay","Peru","Philippines","Poland","Portugal","Qatar","Romania","Russia","Rwanda",
+              "Saint Kitts and Nevis","Saint Lucia","Saint Vincent and the Grenadines","Samoa","San Marino",
+              "Sao Tome and Principe","Saudi Arabia","Senegal","Serbia","Seychelles","Sierra Leone","Singapore","Slovakia",
+              "Slovenia","Solomon Islands","Somalia","South Africa","South Korea","South Sudan","Spain","Sri Lanka",
+              "Sudan","Suriname","Sweden","Switzerland","Syria","Tajikistan","Tanzania","Thailand","Timor-Leste","Togo",
+              "Tonga","Trinidad and Tobago","Tunisia","Turkey","Turkmenistan","Tuvalu","Uganda","Ukraine",
+              "United Arab Emirates","Uruguay","Uzbekistan","Vanuatu","Venezuela",
+              "Vietnam","Yemen","Zambia","Zimbabwe"
+];
+
+//generate the colors for each country
+
+const colorMap = {};
+allcountries.forEach(country => {
+    colorMap[country] = d3.rgb(
+    Math.random() * 255,   // Random R
+    Math.random() * 255,   // Random G
+    Math.random() * 255    // Random B
+  )});
+
+const countryMap = {};
+let tracker  = "country"
+allcountries.forEach(country => {
+  initialCountries = ["Least developed countries (Jones et al.)","United States","India","World","China", "High-income countries","Upper-middle-income countries","Low-income countries","Lower-middle-income countries"]
+  if (initialCountries.includes(country)){
+    countryMap[country] = "checked";
+  }
+  
+  
+});
+    // Create the SVG container for the chart
+    const svg = d3.select("#chart").attr("width", width + margin.left + margin.right)
+                  .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                  .attr("transform", `translate(${margin.left},${margin.top})`);
+
+    
+    const options = allcountries
+    // Select container and bind data
+    d3.select("#checkbox-container")
+    .selectAll("label")
+    .data(options)
+    .enter()
+    .append("label")
+    .attr("class", "country-item")
+    .text(d => d)               // add label text
+    .append("input")
+    .attr("type", "checkbox")
+    .attr("checked", d => countryMap[d])    // set type to checkbox
+    .attr("value", d => d)    // assign value from array
+    .style("margin-right", "10px");
+
+    // Create a tooltip div
+    const tooltip = d3.select("#tooltip");
+    let selectedCountries = ["Least developed countries (Jones et al.)","World","United States","China","India","High-income countries","Upper-middle-income countries","Low-income countries","Lower-middle-income countries"];
+    
+    //function to render the svg
+    function render(selectedCountries , tracker){
+      svg.selectAll("*").remove()
+      if (tracker != null && tracker == "share"){
+
+
+            // Set up scales
+          const x = d3.scaleLinear().domain([1800, 2026]).range([0, width]);
+          const y = d3.scaleLinear().domain([0, 100]).range([height, 0]);
+
+          // Create the X and Y axes
+          const xAxis = d3.axisBottom(x).ticks(15).tickFormat(d3.format("d"));
+          const yAxis = d3.axisLeft(y).ticks(15);
+          //const yAxis = d3.axisLeft(y).ticks(15).tickFormat(d => d/1000000000 + " billion t");
+          
+
+          // Append the X and Y axes to the SVG
+          xAxisGroup = svg.append("g").attr("class", "x axis").attr("transform", `translate(0,${height})`).call(xAxis);
+          yAxisGroup = svg.append("g").attr("class", "y axis").call(yAxis);
+
+          yAxisGroup.append("text")
+          .attr("class", "y-axis-label")
+          .attr("transform", "rotate(-90)")       // rotate text for vertical label
+          .attr("x", -300)                         // move left (adjust based on chart height)
+          .attr("y", -40)                          // move down from axis
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")       // 🔹 set font size
+          .style("font-weight", "bold") 
+          .text("Share of global CO2 emissions in percentage");
+
+          xAxisGroup.append("text")
+          .attr("class", "x-axis-label")
+          .attr("x", 400)                         // move left (adjust based on chart height)
+          .attr("y", 40)                          // move down from axis
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")       // 🔹 set font size
+          .style("font-weight", "bold") 
+          .text("Years (Range 1800 - 2020) ");
+
+          // Define the line function
+          const line = d3.line().x(d => x(d.year)).y(d => y(d.value));
+
+
+            d3.json("./country_emissions.json").then(function(data) {
+            // For example, display data in the console
+            console.log('selected countries', selectedCountries)
+            data.forEach(function(each) {
+              countries = Object.keys(each);
+              //const colorMap = {};
+                  countries.forEach(country => {
+                    if(selectedCountries.includes(country)){
+                      var values = each[country];
+                      if(country === "World"){
+                        //draw the annotation line 
+                        const annotationPoint = values.find(d => d.year === 2014);
+                        console.log(annotationPoint)
+
+                        // Draw a dashed line
+                        svg.append("line")
+                            .attr("class", "annotation-line")
+                            .attr("x1", x(annotationPoint.year))
+                            .attr("y1", y(annotationPoint.value))
+                            .attr("x2", x(annotationPoint.year))
+                            .attr("y2", height)
+                            .attr("stroke", "red")
+                            .attr("stroke-dasharray", "4");
+
+                        // Add text label
+                        svg.append("text")
+                            .attr("x", x(annotationPoint.year) + 5)
+                            .attr("y", y(annotationPoint.value) - 10)
+                            .text(`${annotationPoint.year}:Upper Middle Income >= High Income countries.`)
+                            //.html(`
+                            //  <strong>Year : ${annotationPoint.year}</strong> <br/>
+                            //  Emissions from upper-middle-income countries have now surpassed those of high-income countries, while high-income countries show a clear decreasing trend.<br/>
+                            //`)
+                            .attr("text-anchor", "left")
+                            .style("font-size", "12px")   // change text size
+                            .style("font-weight", "bold")
+                            .style("fill", "red") 
+                            .attr("transform", "translate(-150, 200)");
+                      }
+                      
+
+                      element = values[values.length - 1]
+                      svg.append("path")
+                      .data([values])
+                      .attr("class", "line")
+                      .attr("d", line)
+                      .attr("stroke", colorMap[country])
+                      .attr("stroke-width", 2)
+                      .attr("fill", "none")
+                      .on("mouseover", function(event) {
+
+                        let coords = d3.pointer(event);
+                        let mouseX = coords[0];
+                        let dataXValue = x.invert(mouseX)
+                        //console.log('the actual value' , Math.floor(dataXValue))
+                        let mouseY = coords[1]
+                        let dataYValue = y.invert(mouseY)
+                        //console.log('the actual y value' , Math.floor(dataYValue))
+
+                        // update tooltip
+                        //tooltip.style("visibility", "visible").text(`${dataXValue}` , `${dataYValue}`);
+                        tooltip.style("visibility", "visible")
+                        .html(`
+                          <strong>${country}</strong><br/>
+                          Year : ${Math.floor(dataXValue)}<br/>
+                          Share of world total : ${dataYValue}
+                        `);
+                         //     .text(`${Math.floor(dataXValue)}` , `${dataYValue}`);
+                      })
+                      .on("mousemove", function(event) {
+                        tooltip.style("top", `${event.pageY + 10}px`).style("left", `${event.pageX + 10}px`);
+                      })
+                      .on("mouseout", function() {
+                        tooltip.style("visibility", "hidden");
+                      });
+                      svg.append("text")
+                      .attr("x", x(data[data.length - 1].x) + 5) // small offset to the right
+                      .attr("y", y(data[data.length - 1].y))
+                      .attr("transform", d => `translate(${x(element.year)}, ${y(element.value)})`)
+                      .datum(country)
+                      .attr("dy", "0.35em")
+                      .style("font-size", "12px")
+                      .style("fill", "steelblue")
+                      .text(country);
+
+                      //code for tooltip dynamically
+
+                  }
+              });
+
+            });
+
+          }).catch(function(error) {
+            // Handle error
+            console.error("Error loading the CSV file:", error);
+          });
+      }
+      else{
+        const x = d3.scaleLinear().domain([1850, 2026]).range([0, width]);
+        const y = d3.scaleLinear().domain([0, 60000000000]).range([height, 0]); 
+
+        // Create the X and Y axes
+          const xAxis = d3.axisBottom(x).ticks(15).tickFormat(d3.format("d"));
+          const yAxis = d3.axisLeft(y).ticks(15).tickFormat(d => d/1000000000 + " billion t");
+
+          // Append the X and Y axes to the SVG
+          xAxisGroup = svg.append("g").attr("class", "x axis").attr("transform", `translate(0,${height})`).call(xAxis);
+          yAxisGroup = svg.append("g").attr("class", "y axis").call(yAxis);
+
+          yAxisGroup.append("text")
+          .attr("class", "y-axis-label")
+          .attr("transform", "rotate(-90)")       // rotate text for vertical label
+          .attr("x", -300)                         // move left (adjust based on chart height)
+          .attr("y", -90)                          // move down from axis
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")       // 🔹 set font size
+          .style("font-weight", "bold") 
+          .text("Emissions per country in tonnes");
+
+          xAxisGroup.append("text")
+          .attr("class", "x-axis-label")
+          .attr("x", 400)                         // move left (adjust based on chart height)
+          .attr("y", 40)                          // move down from axis
+          .attr("fill", "black")
+          .attr("text-anchor", "middle")
+          .style("font-size", "12px")       // 🔹 set font size
+          .style("font-weight", "bold") 
+          .text("Years (Range 1800 - 2020) ");
+
+          // Define the line function
+          const line = d3.line().x(d => x(d.year)).y(d => y(d.value));
+
+        d3.json("./greenhouse_gas_emissions.json").then(function(data) {
+            // For example, display data in the console
+            data.forEach(function(each) {
+              countries = Object.keys(each);
+              //const colorMap = {};
+                  countries.forEach(country => {
+                    if(selectedCountries.includes(country)){
+                      //colorMap[country] = d3.rgb(
+                      //Math.random() * 255,   // Random R
+                      //Math.random() * 255,   // Random G
+                      //Math.random() * 255    // Random B
+                    //)
+                      var values = each[country];
+                      element = values[values.length - 1]
+                      svg.append("path")
+                      .data([values])
+                      .attr("class", "line")
+                      .attr("d", line)
+                      .attr("stroke", colorMap[country])
+                      .attr("stroke-width", 2)
+                      .attr("fill", "none")
+                      .on("mouseover", function(event) {
+                        let coords = d3.pointer(event);
+                        let mouseX = coords[0];
+                        let dataXValue = x.invert(mouseX)
+                        //console.log('the actual value' , Math.floor(dataXValue))
+                        let mouseY = coords[1]
+                        let dataYValue = y.invert(mouseY)
+                        tooltip.style("visibility", "visible")
+                        //const emission = dataYValue/1000000000
+                        .html(`
+                          <strong>${country}</strong><br/>
+                          Year : ${Math.floor(dataXValue)}<br/>
+                          Emissions in Billion Tons : ${Math.round((dataYValue/1000000000) * 100) / 100}
+                        `);
+                      })
+                      .on("mousemove", function(event) {
+                        tooltip.style("top", `${event.pageY + 10}px`).style("left", `${event.pageX + 10}px`);
+                      })
+                      .on("mouseout", function() {
+                        tooltip.style("visibility", "hidden");
+                      });
+                      svg.append("text")
+                      .attr("x", x(data[data.length - 1].x) + 5) // small offset to the right
+                      .attr("y", y(data[data.length - 1].y))
+                      .attr("transform", d => `translate(${x(element.year)}, ${y(element.value)})`)
+                      .datum(country)
+                      .attr("dy", "0.35em")
+                      .style("font-size", "12px")
+                      .style("fill", "steelblue")
+                      .text(country);
+                    }
+                  });
+            });
+          }).catch(function(error) {
+            // Handle error
+            console.error("Error loading the CSV file:", error);
+          });
+      }
+
+          
+
+  }
+    d3.selectAll("#checkbox-container input").on("change", function() {
+      selectedCountries = [];
+      d3.selectAll("#checkbox-container input:checked").each(function() {
+        selectedCountries.push(this.value);
+      });
+
+      render(selectedCountries, tracker);
+    });
+
+    d3.select("#toggleBox").on("change", function() {
+      // Get checked state
+      const checked = d3.select(this).property("checked");
+
+      if(checked){
+        tracker = "share"
+      }
+      else{
+        tracker = "country"
+      }
+
+      render(selectedCountries, tracker);
+
+      // ✅ Show/hide div based on checkbox
+      //d3.select("#viz").style("display", checked ? "block" : "none");
+
+      //console.log("Checkbox changed:", checked);
+    });
+
+    render(selectedCountries, "country");
+
+  </script>
+</body>
+</html>
