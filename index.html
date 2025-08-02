@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Greenhouse emissions</title>
+  <title>D3.js Line Chart with Tooltip</title>
   <script src="https://d3js.org/d3.v6.min.js"></script>
   <script src="https://unpkg.com/topojson-client@3"></script>
   <link rel="stylesheet" href="./styles.css">
@@ -308,6 +308,42 @@ allcountries.forEach(country => {
                       //Math.random() * 255    // Random B
                     //)
                       var values = each[country];
+                      if(country === "World"){
+                        //draw the annotation line 
+                        const annotationPoint = values.find(d => d.year === 1935);
+                        //console.log(annotationPoint)
+                        const annotationPoint1 = values.find(d => d.year === 2023);
+
+                        // Draw a dashed line
+                        svg.append("line")
+                            .attr("class", "annotation-line")
+                            .attr("x1", x(annotationPoint.year))
+                            .attr("y1", y(annotationPoint.value)-360)
+                            .attr("x2", x(annotationPoint.year))
+                            .attr("y2", height)
+                            .attr("stroke", "red")
+                            .attr("stroke-dasharray", "4");
+
+                        svg.append("line")
+                            .attr("class", "annotation-line")
+                            .attr("x1", x(annotationPoint1.year))
+                            .attr("y1", y(annotationPoint1.value))
+                            .attr("x2", x(annotationPoint1.year))
+                            .attr("y2", height)
+                            .attr("stroke", "red")
+                            .attr("stroke-dasharray", "4");
+
+                        // Add text label
+                        svg.append("text")
+                            .attr("x", x(annotationPoint.year) + 5)
+                            .attr("y", y(annotationPoint.value) - 10)
+                            .text("Rapid increase in world emissions after 1935")
+                            .attr("text-anchor", "left")
+                            .style("font-size", "12px")   // change text size
+                            .style("font-weight", "bold")
+                            .style("fill", "red") 
+                            .attr("transform", "translate(10, -320)");
+                      }
                       element = values[values.length - 1]
                       svg.append("path")
                       .data([values])
